@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NailSnap AI - Thử Móng Ảo Trong 3 Giây</title>
+    
+    <!-- Favicon & Brand Icons -->
+    <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+    <link rel="stylesheet" href="/css/style.css">
+
+    <!-- Google MediaPipe Hands CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <!-- Ambient Glow Background -->
+    <div class="ambient-glow-1"></div>
+    <div class="ambient-glow-2"></div>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="brand-wrapper">
+            <img src="/assets/logo.svg" alt="NailSnap AI" class="brand-logo">
+        </div>
+        <div class="header-badges">
+            <span class="badge-pill">
+                <span class="badge-live-dot"></span>
+                <span>Hà Nội • HCM • USA</span>
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main>
+        <!-- Viewport Camera / Image Section -->
+        <section class="viewport-section">
+            <div class="camera-container">
+                <!-- Video Stream (Live Camera) -->
+                <video id="cameraVideo" playsinline autoplay muted style="display: none;"></video>
+                
+                <!-- Static Hand Image (Upload & Sample Hands) -->
+                <img id="sourceImage" src="/assets/sample_hands/sample_fair.jpg" alt="Preview Hand">
+                
+                <!-- AR Canvas Overlay for Nail Rendering -->
+                <canvas id="nailCanvas"></canvas>
+
+                <!-- Floating Hand Status Pill -->
+                <div class="hand-status-pill">
+                    <span id="statusDot" class="badge-live-dot" style="background-color: #10B981;"></span>
+                    <span id="handStatusText">🟢 Đã nhận diện 5 móng tay</span>
+                </div>
+
+                <!-- Floating Quick Actions Inside Viewport -->
+                <div class="floating-actions">
+                    <button class="btn-icon-float" id="btnSnapshot" title="Chụp ảnh khoe bạn bè">
+                        📸
+                    </button>
+                    <button class="btn-icon-float" id="btnSkinAdvisor" title="AI Phân tích da">
+                        ✨
+                    </button>
+                    <button class="btn-icon-float" id="btnShowRecipe" title="Công thức gửi thợ nail">
+                        📋
+                    </button>
+                </div>
+
+                <!-- Source Switcher (Camera vs Upload vs Sample) -->
+                <div class="source-selector">
+                    <button class="btn-source active" id="btnSourceSample">
+                        🖐️ Mẫu Sẵn
+                    </button>
+                    <button class="btn-source" id="btnSourceCamera">
+                        📷 Camera
+                    </button>
+                    <button class="btn-source" id="btnSourceUpload">
+                        📁 Tải Ảnh
+                    </button>
+                    <input type="file" id="uploadInput" accept="image/*" style="display: none;">
+                </div>
+            </div>
+
+            <!-- Quick Sample Hand Switcher Bar -->
+            <div id="sampleHandsBar" style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="filter-chip sample-hand-btn active" data-sample="fair">🖐️ Da Trắng Sáng</button>
+                <button class="filter-chip sample-hand-btn" data-sample="tan">🖐️ Da Bánh Mật</button>
+                <button class="filter-chip sample-hand-btn" data-sample="short">🖐️ Móng Ngắn</button>
+            </div>
+        </section>
+
+        <!-- Studio Control Drawer (Mobile Bottom Sheet / Desktop Sidebar) -->
+        <section class="studio-panel">
+            <!-- Navigation Tabs -->
+            <nav class="nav-tabs">
+                <button class="nav-tab-btn active" data-tab="tabPresets">
+                    <span>🌸</span>
+                    <span>Hot Trend</span>
+                </button>
+                <button class="nav-tab-btn" data-tab="tabCustom">
+                    <span>🎨</span>
+                    <span>Tự Phối</span>
+                </button>
+                <button class="nav-tab-btn" data-tab="tabAI">
+                    <span>🤖</span>
+                    <span>AI Thiết Kế</span>
+                </button>
+                <button class="nav-tab-btn" data-tab="tabSalon">
+                    <span>🏪</span>
+                    <span>Góc Tiệm</span>
+                </button>
+            </nav>
+
+            <!-- TAB 1: MẪU HOT TREND (PRESETS) -->
+            <div id="tabPresets" class="tab-content active">
+                <div class="category-filter">
+                    <button class="filter-chip active" data-filter="all">Tất cả mẫu</button>
+                    <button class="filter-chip" data-filter="douyin">Douyin & Hàn</button>
+                    <button class="filter-chip" data-filter="luxury">Hà Nội Quý Phái</button>
+                    <button class="filter-chip" data-filter="y2k">Sài Gòn & USA Y2K</button>
+                    <button class="filter-chip" data-filter="classic">Cổ Điển</button>
+                </div>
+                <div class="presets-grid" id="presetsGrid">
+                    <!-- Cards will be populated by JS -->
+                </div>
+            </div>
+
+            <!-- TAB 2: TỰ PHỐI MÓNG (CUSTOM STUDIO) -->
+            <div id="tabCustom" class="tab-content">
+                <!-- Chọn Phom Móng -->
+                <div class="control-group">
+                    <div class="control-title">
+                        <span>1. Phom Dáng Móng (Shape)</span>
+                    </div>
+                    <div class="shape-selector">
+                        <button class="shape-btn active" data-shape="almond">
+                            <div class="shape-icon almond"></div>
+                            <span>Hạnh Nhân</span>
+                        </button>
+                        <button class="shape-btn" data-shape="square">
+                            <div class="shape-icon square"></div>
+                            <span>Vuông</span>
+                        </button>
+                        <button class="shape-btn" data-shape="coffin">
+                            <div class="shape-icon coffin"></div>
+                            <span>Thang</span>
+                        </button>
+                        <button class="shape-btn" data-shape="stiletto">
+                            <div class="shape-icon stiletto"></div>
+                            <span>Nhọn</span>
+                        </button>
+                        <button class="shape-btn" data-shape="round">
+                            <div class="shape-icon round"></div>
+                            <span>Tròn</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chọn Độ Dài Móng -->
+                <div class="control-group">
+                    <div class="control-title">
+                        <span>2. Độ Dài Móng</span>
+                    </div>
+                    <div class="slider-container">
+                        <span style="font-size:11px; color:#9CA3AF;">Tự nhiên</span>
+                        <input type="range" id="lengthSlider" min="1.0" max="1.7" step="0.05" value="1.25">
+                        <span style="font-size:11px; color:#9CA3AF;">Dài tiệc</span>
+                    </div>
+                </div>
+
+                <!-- Chọn Chất Liệu Sơn -->
+                <div class="control-group">
+                    <div class="control-title">
+                        <span>3. Chất Liệu Sơn (Finish)</span>
+                    </div>
+                    <div class="finish-selector">
+                        <button class="finish-btn active" data-finish="jelly">Sơn Thạch</button>
+                        <button class="finish-btn" data-finish="glossy">Bóng Gel</button>
+                        <button class="finish-btn" data-finish="chrome">Tráng Gương</button>
+                        <button class="finish-btn" data-finish="matte">Sơn Lì Nhung</button>
+                        <button class="finish-btn" data-finish="cat_eye">Mắt Mèo 3D</button>
+                    </div>
+                </div>
+
+                <!-- Bảng Màu Salon Hot Trend -->
+                <div class="control-group">
+                    <div class="control-title">
+                        <span>4. Bảng Màu Salon Thịnh Hành</span>
+                        <input type="color" id="customColorPicker" value="#FF8DA1" style="width:24px; height:24px; border:none; border-radius:50%; cursor:pointer;">
+                    </div>
+                    <div class="color-grid" id="colorGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Phụ Kiện Đính Kèm -->
+                <div class="control-group">
+                    <div class="control-title">
+                        <span>5. Phụ Kiện & Hiệu Ứng</span>
+                    </div>
+                    <div class="toggle-group">
+                        <div class="toggle-card" id="toggleGemstones">
+                            <span>💎 Đính Đá Swarovski</span>
+                        </div>
+                        <div class="toggle-card" id="toggleFrench">
+                            <span>🤍 Viền Đầu Móng French</span>
+                        </div>
+                        <div class="toggle-card" id="toggleCatEye">
+                            <span>✨ Mắt Mèo Ánh Trăng</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: AI NHÀ THIẾT KẾ (AI DESIGNER) -->
+            <div id="tabAI" class="tab-content">
+                <div class="ai-box">
+                    <div style="font-size: 13px; font-weight: 700; color: #FFE082;">
+                        ✨ Mô Tả Ý Tưởng Nail Của Bạn Bằng Chữ
+                    </div>
+                    <textarea id="aiPromptInput" class="ai-textarea" placeholder="Ví dụ: Váy dạ hội đỏ nhung dự tiệc tối, phong cách sang chảnh kiêu kỳ hợp mệnh Thổ..."></textarea>
+                    
+                    <div style="font-size: 11px; color: #9CA3AF;">Gợi ý câu lệnh nhanh:</div>
+                    <div class="prompt-suggestions">
+                        <span class="prompt-tag">🌸 Hoa đào thạch hồng Douyin</span>
+                        <span class="prompt-tag">💎 Cưới hỏi ngọc trai hoàng gia</span>
+                        <span class="prompt-tag">⚡ Y2K tráng gương bạc chiến đét</span>
+                        <span class="prompt-tag">🍷 Đỏ rượu vang nữ quyền quyến rũ</span>
+                        <span class="prompt-tag">🍀 Ngọc lục bảo hút tài lộc</span>
+                    </div>
+
+                    <button class="btn-primary" id="btnGenerateAI">
+                        <span>✨ AI Tạo Mẫu Độc Bản Ngay</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 4: GÓC TIỆM NAIL & MÃ QR (SALON MODE) -->
+            <div id="tabSalon" class="tab-content">
+                <div class="ai-box">
+                    <h3 style="font-size:16px; font-weight:700; color:#FFFFFF;">In Mã QR Đặt Bàn Tiệm Nail</h3>
+                    <p style="font-size:12px; color:#9CA3AF;">
+                        Chủ tiệm in mã QR này đặt lên bàn chờ. Khách ngồi xuống quét mã là tự mở NailSnap AI thử móng ngay trên điện thoại!
+                    </p>
+                    <div style="text-align:center; padding:16px; background:#FFF; border-radius:16px; width:180px; margin:0 auto;">
+                        <!-- QR Code Image generated from API -->
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=http://localhost:8000" alt="QR Code" style="width:100%; height:auto;">
+                        <div style="color:#000; font-size:10px; font-weight:700; margin-top:4px;">NailSnap AI Scanner</div>
+                    </div>
+                    <div style="font-size:12px; color:#D1D5DB; text-align:center;">
+                        Khách không cần tải app - Quét là thử móng được ngay!
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL 1: AI TƯ VẤN SẮC TỐ DA (SKIN TONE ADVISOR) -->
+    <div class="modal-overlay" id="skinModal">
+        <div class="modal-card">
+            <button class="modal-close">&times;</button>
+            <h3 style="font-size:18px; font-weight:800; color:#FFFFFF; margin-bottom:12px;">
+                ✨ Chuyên Gia AI Phân Tích Sắc Tố Da
+            </h3>
+            <div id="skinResultContent">
+                <!-- Content populated dynamically -->
+            </div>
+            <button class="btn-primary modal-close" style="margin-top:16px;">
+                Đã hiểu, áp dụng màu khuyên dùng
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CÔNG THỨC GỬI THỢ NAIL (RECIPE CARD) -->
+    <div class="modal-overlay" id="recipeModal">
+        <div class="modal-card">
+            <button class="modal-close">&times;</button>
+            <h3 style="font-size:18px; font-weight:800; color:#FF758C; margin-bottom:8px;">
+                📋 Phiếu Yêu Cầu Cho Thợ Nail
+            </h3>
+            <p style="font-size:12px; color:#9CA3AF;">
+                Đưa màn hình này cho thợ móng để thợ pha đúng màu và vẽ chuẩn 100% mẫu bạn đã chọn!
+            </p>
+            <div class="recipe-box">
+                <div class="recipe-row">
+                    <span>Tên Mẫu:</span>
+                    <span id="recipeNailName" style="color:#FFE082;">-</span>
+                </div>
+                <div class="recipe-row">
+                    <span>Phom Móng:</span>
+                    <span id="recipeShape">-</span>
+                </div>
+                <div class="recipe-row">
+                    <span>Chất Liệu Sơn:</span>
+                    <span id="recipeFinish">-</span>
+                </div>
+                <div class="recipe-row">
+                    <span>Mã Màu Chủ Đạo:</span>
+                    <span id="recipeColorHex">-</span>
+                </div>
+                <div style="margin-top:10px; font-size:12px; color:#D1D5DB;">
+                    <strong>Công thức kỹ thuật:</strong>
+                    <p id="recipeFormula" style="margin-top:4px; color:#A7F3D0; line-height:1.4;">-</p>
+                </div>
+            </div>
+            <button class="btn-primary modal-close">
+                Đã Lưu Phiếu Làm Móng
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: SNAPSHOT PREVIEW & DOWNLOAD -->
+    <div class="modal-overlay" id="snapshotModal">
+        <div class="modal-card">
+            <button class="modal-close">&times;</button>
+            <h3 style="font-size:18px; font-weight:800; color:#FFFFFF; margin-bottom:12px;">
+                📸 Bức Ảnh Móng Xinh Của Bạn
+            </h3>
+            <div style="border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,0.2); margin-bottom:16px;">
+                <img id="snapshotPreview" src="" alt="Snapshot" style="width:100%; display:block;">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-primary" id="btnDownloadSnapshot">
+                    ⬇️ Tải Ảnh Về Máy
+                </button>
+                <button class="btn-secondary modal-close">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/nail_presets.js"></script>
+    <script src="/js/nail_ar.js"></script>
+    <script src="/js/mediapipe_hand.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
