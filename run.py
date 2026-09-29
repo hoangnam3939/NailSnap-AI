@@ -7,6 +7,15 @@ import socket
 import webbrowser
 import os
 import sys
+
+# Đảm bảo mã hóa UTF-8 trên Windows console
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 import uvicorn
 
 def get_local_ip():
