@@ -45,11 +45,9 @@ if __name__ == "__main__":
     
     print_banner(port, local_ip)
     
-    # Tự động mở trình duyệt web
-    try:
-        webbrowser.open(f"http://localhost:{port}")
-    except Exception:
-        pass
+    # Tự động mở trình duyệt web sau 1 giây khi server đã sẵn sàng
+    import threading
+    threading.Timer(1.0, lambda: webbrowser.open(f"http://localhost:{port}")).start()
         
     # Chạy FastAPI Server
     uvicorn.run("backend.main:app", host=host, port=port, reload=False)
